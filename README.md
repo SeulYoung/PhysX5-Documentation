@@ -1,2 +1,13 @@
 # Physx5-Documentation
-PhysX 5 Documentation Translation
+
+## About
+
+本仓库是PhysX5官方文档的翻译，在后续的阅读过程中我会不断更新翻译。
+如有错误还请谅解，欢迎指正。
+
+This repository is a translation of the PhysX5 official documentation, and I will continue to update the translation during subsequent readings.
+
+## 章节 (Chapters)
+
+- [PhysX License](./Chapters/PhysX-License.md)
+- [Building with PhysX](./Chapters/Building-with-PhysX.md)
