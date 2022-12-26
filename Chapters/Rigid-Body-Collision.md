@@ -182,4 +182,100 @@ void addDynamicTriangleMeshInstance(const PxTransform& transform, PxTriangleMesh
 
 ### Trigger Shapes
 
+触发器形状在场景的模拟中不发挥任何作用（尽管它们可以被配置为参与场景查询）。相反，它们的作用是报告与另一个形状的重叠情况。接触报告并不会为交叉点生成接触，因此接触报告不适用于触发器形状。此外，由于触发器在模拟中不发挥作用，SDK 不允许 PxShapeFlag::eSIMULATION_SHAPE 和 PxShapeFlag::eTRIGGER_SHAPE 标志同时被配置；也就是说，如果一个标志被配置，那么试图配置另一个标志将会被拒绝并产生一个错误流。
+
+触发器形状可以用来实现传感器。例如，它们可以被用来确定玩家是否已经到达检查点区域，或者当一个物体在门前移动时自动打开门。在这样的例子中，检查点或门周围的空间区域将被表示为一个具有独特形状（通常是一个盒子或一个球体）的角色，该角色被配置为一个触发器形状：
+
+```cpp
+PxShape* sensorShape;
+gSensorActor->getShapes(&sensorShape, 1);
+sensorShape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, false);
+sensorShape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, true);
+```
+
+通过用户定义的 PxSimulationEventCallback 对象，特别是通过 PxSimulationEventCallback::onTrigger() 的实现，报告角色与触发器的重叠情况：
+
+```cpp
+void MySimulationEventCallback::onTrigger(PxTriggerPair* pairs, PxU32 count)
+{
+    for(PxU32 i=0; i<count; i++)
+    {
+        // ignore pairs when shapes have been deleted
+        if(pairs[i].flags & (PxTriggerPairFlag::eREMOVED_SHAPE_TRIGGER | PxTriggerPairFlag::eREMOVED_SHAPE_OTHER))
+            continue;
+
+        // Detect for example that a player entered a checkpoint zone
+        if((&pairs[i].otherShape->getActor() == gPlayerActor) &&
+            (&pairs[i].triggerShape->getActor() == gSensorActor))
+        {
+            gCheckpointReached = true;
+        }
+    }
+}
+```
+
+上面的代码遍历了所有涉及触发器形状的重叠形状对。如果发现玩家触及了检查点传感器，那么标志 gCheckpointReached 被设置为 true。
+
+## Broad-phase Collision Detection
+
+广义阶段是碰撞管道的第一部分。它被称为广义阶段是因为它检测轴对齐后的边投影之间的重叠情况，即它只报告潜在的碰撞而不是实际的碰撞。实际的碰撞是由物理学管道的下一个阶段检测的，名为狭义阶段。
+
+### Broad-phase Algorithms
+
+PhysX支持多种广义阶段的碰撞算法：
+
+- sweep-and-prune (SAP)
+- multi box pruning (MBP)
+- automatic box pruning (ABP)
+- parallel automatic box pruning (PABP)
+- GPU broadphase (GPU)
+
+PxBroadPhaseType::eSAP 是一个很好的通用选择，当许多对象处于睡眠状态时性能很好。不过，当所有的物体都在移动，或者大量的物体被加入或移出广义阶段时，性能会明显下降。这个算法不需要定义世界边界就可以工作。
+
+PxBroadPhaseType::eMBP 是 PhysX 3.3 中引入的一种算法。它是一种替代性的广义阶段算法，当所有物体都在移动或插入大量物体时，不会出现 eSAP 那样的性能问题。然而，当许多物体处于睡眠状态时，其通用性能可能不如 eSAP，而且它需要用户定义世界边界（broadphase regions）才能工作。
+
+PxBroadPhaseType::eABP 是 PhysX 4 中引入的 PxBroadPhaseType::eMBP 的重新实现，它自动管理世界边界和广义阶段区域，从而提供 PxBroadPhaseType::eSAP 的便利性，再加上 PxBroadPhaseType::eMBP 的性能。虽然 PxBroadPhaseType::eSAP 在大多数对象处于睡眠状态时可以保持较快的速度，而 PxBroadPhaseType::eMBP 在使用大量正确定义的区域时可以保持较快的速度，但 PxBroadPhaseType::eABP 往往在平均性能和内存使用上都是最好的。它是广义阶段的一个很好的默认选择。
+
+PxBroadPhaseType::ePABP 是 PhysX 5 中引入的 PxBroadPhaseType::eABP 的重新实现。 它与 PxBroadPhaseType::eABP 相同，但利用了多线程的优势。因为单线程的 ABP 实现本身就非常快，其多线程版本只对大型场景更快，对小型场景不一定，且它也会使用更多的内存。
+
+PxBroadPhaseType::eGPU 是增量扫描和修剪方法的一个 GPU 实现。此外，它使用了 ABP 风格的初始对生成方法，以避免插入形状时出现大峰值。它不仅具有传统 SAP 方法的优势，在许多对象处于睡眠状态时很好，而且由于是完全并行的，在大量形状移动或运行时对插入和删除的支持也很好。
+
+所需的广义阶段算法是由 PxSceneDesc::broadPhaseType 控制的。
+
+### Regions of Interest
+
+一个 region of interest 是一个世界空间的AABB包围盒，围绕着一个由广义阶段控制的空间体积。包含在这些区域内的物体会被广义阶段正确处理。落在这些区域之外的物体将失去所有的碰撞检测。理想情况下，这些区域应该覆盖整个模拟空间，同时限制所覆盖的空白空间的数量。
+
+区域之间可以重叠，但为了获得最大的效率，建议尽可能地减少区域之间的重叠。请注意，AABBs 刚好接触的两个区域不被认为是重叠的。例如，PxBroadPhaseExt::createRegionsFromWorldBounds() 辅助函数通过简单地将一个给定世界的 AABB 细分为一个规则的二维网格来创建一些不重叠的区域边界。
+
+区域可以由 PxBroadPhaseRegion 结构和分配给它们的用户数据来定义。它们可以在场景创建或运行时使用 PxScene::addBroadPhaseRegion() 来定义。SDK 会返回分配给新创建的区域的句柄，以后可以使用PxScene::removeBroadPhaseRegion() 来删除这些区域。
+
+新添加的区域可能会与已有的对象重叠。如果 PxScene::addBroadPhaseRegion() 调用中的 populateRegion 参数被设置，SDK可以自动将这些对象添加到新区域。但是这个操作并相当昂贵，而且可能会对性能产生很大的影响，尤其是在同一帧中添加多个区域时。因此，建议尽可能地禁用它。这样区域就会被创建为空，并且只会把区域创建后被添加到场景中的对象填充进去，或者在更新时（即移动时）填充之前已经创建并存在的对象。
+
+注意，只有 PxBroadPhaseType::eMBP 需要定义区域，其他算法则不需要。这些信息被记录在 PxBroadPhaseCaps 结构中，该结构列出了每个算法的信息和能力。这个结构可以通过调用 PxScene::getBroadPhaseCaps() 来检索。
+
+关于当前区域的运行时信息可以通过 PxScene::getNbBroadPhaseRegions() 和 PxScene::getBroadPhaseRegions() 函数进行检索。
+
+目前区域的最大数量被限制在256个。
+
+### Broad-phase Callback
+
+可以在 PxSceneDesc 构中定义一个与广义阶段有关的事件回调。这个 PxBroadPhaseCallback 对象将在发现物体超出指定的关注区域时被调用，也就是"出界"。SDK 将禁用这些物体的碰撞检测。一旦物体重新进入一个有效的区域，它就会自动重新启用。
+
+用户可以自行决定如何处理界外物体。典型的选择是：
+
+- 删除这些物体
+- 让它们继续运动而不发生碰撞，直到它们重新进入一个有效区域
+- 人为地将它们传送回一个有效位置
+
+这个回调主要用于 PxBroadPhaseType::eMBP。
+
+## Interactions
+
+SDK 会在内部为广义阶段报告的每一对重叠物体创建一个交互对象。这些对象不仅是为碰撞的刚体对创建，也为重叠的触发器对创建。一般来说，用户应该认为这些对象的创建与所涉及的对象类型（刚体、触发器等）和所涉及的 PxFilterFlag 标志无关。
+
+PhysX 广义阶段的操作对象是形状，而不是角色。这意味着，一个交互是为一对形状创建的，而两个碰撞的复杂角色可以在内部产生多个交互对象。在这种情况下，可以使用聚合来减少交互次数（见Aggregates）。
+
+## Collision Filtering
+
 todo...
