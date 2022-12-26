@@ -6,7 +6,7 @@
 
 ## Rigid Body Object Model
 
-PhysX 使用分层刚体对象/角色模型。
+PhysX 使用自上而下分层的刚体对象/角色模型。
 
 | Class | 扩展自 | 功能性 |
 | --- | --- | --- |
