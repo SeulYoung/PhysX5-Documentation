@@ -59,6 +59,8 @@ PxShape* aBoxShape = PxRigidActorExt::createExclusiveShape(*aBoxActor, PxBoxGeom
 
 ![Geom Type Convex Mesh](https://nvidia-omniverse.github.io/PhysX/physx/5.1.2/_images/GeomTypeConvex.png)
 
+todo...
+
 ### Triangle Meshes
 
 ![Geom Type Triangle Mesh](https://nvidia-omniverse.github.io/PhysX/physx/5.1.2/_images/GeomTypeMesh.png)
