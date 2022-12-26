@@ -7,9 +7,9 @@
 几何体是一种值类型，并继承自一个共同的基类**PxGeometry**。每个几何体类都定义了一个具有固定位置和方向的体积或表面。变换（Transform）指定了几何体被解释的框架。对于平面和胶囊体类型，PhysX 提供了辅助函数，以便从常见的替代表示中构建这些变换。
 
 几何图形可分为两类。
->Primitives（PxBoxGeometry, PxSphereGeometry, PxCapsuleGeometry, PxPlaneGeometry），几何对象包含了所有的数据
->
->网格或高度场（PxConvexMeshGeometry, PxTriangleMeshGeometry, PxHeightFieldGeometry），其中几何对象包含一个指向更大对象的指针（分别为PxConvexMesh, PxTriangleMesh, PxHeightField）你可以在引用这些对象的每个PxGeometry类型中使用不同的尺度。较大的对象必须使用*cooking*过程来创建，下面对每种类型进行描述。
+
+- Primitives（PxBoxGeometry, PxSphereGeometry, PxCapsuleGeometry, PxPlaneGeometry），几何对象包含了所有的数据
+- 网格或高度场（PxConvexMeshGeometry, PxTriangleMeshGeometry, PxHeightFieldGeometry），其中几何对象包含一个指向更大对象的指针（分别为PxConvexMesh, PxTriangleMesh, PxHeightField）你可以在引用这些对象的每个PxGeometry类型中使用不同的尺度。较大的对象必须使用*cooking*过程来创建，下面对每种类型进行描述。
 
 当传入和传出SDK作为模拟几何时，几何体会被复制到 PxShape 类中。在这种不知道几何体具体类型的情况下检索几何体可能会很棘手，因此 PhysX 提供了一个类似联合的包装类（PxGeometryHolder），可以用来按值传递任何几何体类型。每个网格（或高度场）都有一个引用计数，用于跟踪几何体引用该网格的 PxShapes 的数量。
 
