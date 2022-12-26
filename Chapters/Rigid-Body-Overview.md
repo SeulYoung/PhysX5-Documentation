@@ -50,7 +50,7 @@ mScene.addActor(*rigidStatic);
 mScene.addActor(*rigidDynamic);
 ```
 
-关于碰撞几何和形状的更多细节在 Rigid Body Collision 中提供。如果是单一形状的Actor，可以使用PxRigidActorExt::createExclusiveShape()函数，该函数来自PxRigidActorExt.h。
+关于碰撞几何和形状的更多细节在 Rigid Body Collision 中提供。如果是单一形状的 Actor，可以使用 PxRigidActorExt::createExclusiveShape() 函数，该函数来自 PxRigidActorExt.h。
 
 ```cpp
 //plane rigid static
