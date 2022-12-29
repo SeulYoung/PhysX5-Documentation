@@ -14,3 +14,5 @@ This repository is a translation of the PhysX5 official documentation, and I wil
 - [Rigid Body Overview](./Chapters/Rigid-Body-Overview.md)
 - [Rigid Body Collision](./Chapters/Rigid-Body-Collision.md)
 - [Rigid Body Dynamics](./Chapters/Rigid-Body-Dynamics.md)
+- [Geometry Queries](./Chapters/Geometry-Queries.md)
+- [Scene Queries](./Chapters/Scene-Queries.md)
