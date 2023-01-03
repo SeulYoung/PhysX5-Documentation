@@ -16,3 +16,4 @@ This repository is a translation of the PhysX5 official documentation, and I wil
 - [Rigid Body Dynamics](./Chapters/Rigid-Body-Dynamics.md)
 - [Geometry Queries](./Chapters/Geometry-Queries.md)
 - [Scene Queries](./Chapters/Scene-Queries.md)
+- [Debug Visualization](./Chapters/Debug-Visualization.md)
